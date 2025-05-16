@@ -7,7 +7,7 @@ const bot = mineflayer.createBot({
   username: 'GPTBot' // Nome visível no jogo
 })
 
-const OPENAI_KEY = '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'
+const OPENAI_KEY = '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'
 
 let dono = null
 
