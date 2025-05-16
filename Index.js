@@ -1,12 +1,13 @@
-require('dotenv').config()
 const mineflayer = require('mineflayer')
 const axios = require('axios')
 
 const bot = mineflayer.createBot({
-  host: 'Craftzin_.aternos.me', // IP do seu servidor
-  port: 37834,       // Porta
-  username: 'GPTBot' // Nome do bot
+  host: 'Craftzin_.aternos.me',
+  port: 37834,
+  username: 'GPTBot' // Nome visível no jogo
 })
+
+const OPENAI_KEY = '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'
 
 let dono = null
 
@@ -31,17 +32,16 @@ bot.on('chat', async (username, message) => {
   }
 
   else if (message.startsWith('gpt ')) {
-    const pergunta = message.slice(4)
     bot.chat("Pensando...")
-    const resposta = await chatGPT(pergunta)
-    bot.chat(resposta.slice(0, 100))
+    const resposta = await consultaGPT(message.slice(4))
+    bot.chat(resposta.slice(0, 100)) // corta para caber no chat do Minecraft
   }
 })
 
-async function chatGPT(texto) {
+async function consultaGPT(texto) {
   try {
     const res = await axios.post("https://api.openai.com/v1/chat/completions", {
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: "Você é um companheiro dentro do Minecraft, útil e amigável." },
         { role: "user", content: texto }
@@ -49,13 +49,12 @@ async function chatGPT(texto) {
       temperature: 0.8
     }, {
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${OPENAI_KEY}`
       }
     })
-
     return res.data.choices[0].message.content
   } catch (e) {
-    console.error(e)
+    console.error(e.response?.data || e.message)
     return "Erro ao falar com o ChatGPT!"
   }
 }
