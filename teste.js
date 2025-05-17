@@ -44,7 +44,24 @@ async function startServer(serverId) {
   }
 }
 
-// Função para atualizar o status de todos os servidores
+// Função para reiniciar um servidor
+async function restartServer(serverId) {
+  try {
+    const response = await axios.post(`${PANEL_URL}/api/client/servers/${serverId}/power`, {
+      signal: 'restart'
+    }, {
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Accept': 'application/json',
+      }
+    });
+    console.log(`Servidor ${serverId} reiniciado com sucesso!`);
+  } catch (err) {
+    console.error(`Erro ao reiniciar o servidor ${serverId}:`, err.response?.data || err.message);
+  }
+}
+
+// Função para atualizar o status do primeiro servidor
 async function updateStatus() {
   const servers = await getAllServers();
   if (servers.length === 0) {
@@ -52,30 +69,22 @@ async function updateStatus() {
     return;
   }
 
-  // Verifica o status de cada servidor
-  let allServersRunning = true;
-  for (let server of servers) {
-    const serverId = server.attributes.identifier;
-    try {
-      const response = await axios.get(`${PANEL_URL}/api/client/servers/${serverId}/resources`, {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Accept': 'application/json',
-        }
-      });
-      const serverStatus = response.data.attributes.current_state;
-      if (serverStatus !== 'running') {
-        allServersRunning = false;
-        break;
-      }
-    } catch (err) {
-      console.error(`Erro ao verificar status do servidor ${serverId}:`, err.response?.data || err.message);
-      allServersRunning = false;
-      break;
-    }
-  }
+  const firstServer = servers[0];
+  const serverId = firstServer.attributes.identifier;
 
-  status = allServersRunning ? 'running' : 'offline';
+  try {
+    const response = await axios.get(`${PANEL_URL}/api/client/servers/${serverId}/resources`, {
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Accept': 'application/json',
+      }
+    });
+    const serverStatus = response.data.attributes.current_state;
+    status = serverStatus === 'running' ? 'running' : 'offline';
+  } catch (err) {
+    console.error(`Erro ao verificar status do servidor ${serverId}:`, err.response?.data || err.message);
+    status = 'offline';
+  }
 }
 
 // Middleware para checar a API Key
@@ -113,7 +122,8 @@ app.get('/', (req, res) => {
     </head>
     <body>
       <h1>Controle do Pterodáctilo</h1>
-      <button onclick="startAll()">Ligar Todos</button>
+      <button onclick="startServer()">Ligar Servidor</button>
+      <button onclick="restartServer()">Reiniciar Servidor</button>
       <div class="status">
         Status: <span id="statusText">?</span>
         <span id="statusBall" class="ball stopped"></span>
@@ -133,8 +143,16 @@ app.get('/', (req, res) => {
           ball.className = 'ball ' + data.status;
         }
 
-        async function startAll() {
-          await fetch('/start-all', {
+        async function startServer() {
+          await fetch('/start-server', {
+            method: 'POST',
+            headers: { 'x-api-key': apiKey }
+          });
+          updateStatus();
+        }
+
+        async function restartServer() {
+          await fetch('/restart-server', {
             method: 'POST',
             headers: { 'x-api-key': apiKey }
           });
@@ -163,20 +181,30 @@ app.get('/status', async (req, res) => {
   res.json({ status });
 });
 
-// Rota protegida para ligar todos os servidores
-app.post('/start-all', authMiddleware, async (req, res) => {
+// Rota protegida para ligar o primeiro servidor
+app.post('/start-server', authMiddleware, async (req, res) => {
   const servers = await getAllServers();
   if (servers.length === 0) {
     return res.status(404).json({ error: 'Nenhum servidor encontrado.' });
   }
 
-  // Itera sobre todos os servidores e envia o comando para ligar cada um
-  for (let server of servers) {
-    const serverId = server.attributes.identifier;
-    await startServer(serverId);
+  const serverId = servers[0].attributes.identifier;
+  await startServer(serverId);
+
+  res.json({ message: `Servidor ${serverId} está sendo ligado.` });
+});
+
+// Rota protegida para reiniciar o primeiro servidor
+app.post('/restart-server', authMiddleware, async (req, res) => {
+  const servers = await getAllServers();
+  if (servers.length === 0) {
+    return res.status(404).json({ error: 'Nenhum servidor encontrado.' });
   }
 
-  res.json({ message: 'Todos os servidores estão sendo ligados.' });
+  const serverId = servers[0].attributes.identifier;
+  await restartServer(serverId);
+
+  res.json({ message: `Servidor ${serverId} está sendo reiniciado.` });
 });
 
 // Função para pegar o IP da máquina
