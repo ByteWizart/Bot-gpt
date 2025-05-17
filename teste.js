@@ -39,8 +39,10 @@ async function startServer(serverId) {
       }
     });
     console.log(`Servidor ${serverId} ligado com sucesso!`);
+    return 'running'; // Retorna o status atualizado
   } catch (err) {
     console.error(`Erro ao ligar o servidor ${serverId}:`, err.response?.data || err.message);
+    return 'erro'; // Caso haja erro ao ligar o servidor
   }
 }
 
@@ -56,12 +58,14 @@ async function restartServer(serverId) {
       }
     });
     console.log(`Servidor ${serverId} reiniciado com sucesso!`);
+    return 'restarting'; // Retorna status de reinício
   } catch (err) {
     console.error(`Erro ao reiniciar o servidor ${serverId}:`, err.response?.data || err.message);
+    return 'erro'; // Caso haja erro ao reiniciar o servidor
   }
 }
 
-// Função para atualizar o status do primeiro servidor
+// Função para atualizar o status do servidor
 async function updateStatus() {
   const servers = await getAllServers();
   if (servers.length === 0) {
@@ -69,8 +73,7 @@ async function updateStatus() {
     return;
   }
 
-  const firstServer = servers[0];
-  const serverId = firstServer.attributes.identifier;
+  const serverId = servers[0].attributes.identifier;
 
   try {
     const response = await axios.get(`${PANEL_URL}/api/client/servers/${serverId}/resources`, {
@@ -82,7 +85,7 @@ async function updateStatus() {
     const serverStatus = response.data.attributes.current_state;
     status = serverStatus === 'running' ? 'running' : 'offline';
   } catch (err) {
-    console.error(`Erro ao verificar status do servidor ${serverId}:`, err.response?.data || err.message);
+    console.error(`Erro ao verificar status do servidor:`, err.response?.data || err.message);
     status = 'offline';
   }
 }
@@ -159,7 +162,6 @@ app.get('/', (req, res) => {
           updateStatus();
         }
 
-        // Exibe o IP da máquina
         async function displayLocalIP() {
           const res = await fetch('/get-ip');
           const data = await res.json();
@@ -189,7 +191,11 @@ app.post('/start-server', authMiddleware, async (req, res) => {
   }
 
   const serverId = servers[0].attributes.identifier;
-  await startServer(serverId);
+  const serverStatus = await startServer(serverId);
+
+  if (serverStatus === 'erro') {
+    return res.status(500).json({ error: 'Erro ao ligar o servidor.' });
+  }
 
   res.json({ message: `Servidor ${serverId} está sendo ligado.` });
 });
@@ -202,7 +208,11 @@ app.post('/restart-server', authMiddleware, async (req, res) => {
   }
 
   const serverId = servers[0].attributes.identifier;
-  await restartServer(serverId);
+  const serverStatus = await restartServer(serverId);
+
+  if (serverStatus === 'erro') {
+    return res.status(500).json({ error: 'Erro ao reiniciar o servidor.' });
+  }
 
   res.json({ message: `Servidor ${serverId} está sendo reiniciado.` });
 });
