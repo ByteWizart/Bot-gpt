@@ -1,0 +1,12 @@
+{
+  "name": "pterodactilo-server",
+  "version": "1.0.0",
+  "description": "Servidor para controlar o status do Pterodáctilo",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
