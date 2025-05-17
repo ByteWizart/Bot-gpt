@@ -6,7 +6,7 @@ const port = process.env.PORT || 3000;
 
 // Definição da API Key e URL do painel Pterodactyl
 const PANEL_URL = 'https://backend.magmanode.com'; // URL do seu painel Pterodactyl
-const API_KEY = 'sua_api_key_aqui'; // Sua chave API do painel Pterodactyl
+const API_KEY = 'ptlc_qbxFbQxnBnogVMydOoigrzoGD0gx9pAclvFWUoP7w3J'; // Sua chave API do painel Pterodactyl
 
 // Status do pterodáctilo (inicialmente desconhecido)
 let status = 'desconhecido';
